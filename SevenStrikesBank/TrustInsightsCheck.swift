@@ -64,8 +64,12 @@ enum TrustInsightsCheck {
             case .notDetermined, .deniedRequestable:
                 // The app may ask, but from step 2, not here.
                 return nil
-            case .denied, .unavailable:
+            case .denied:
                 // The app may not ask. The person can turn it on in Settings.
+                return nil
+            case .unavailable:
+                // The app may not ask, and Settings may not help: Apple lists unsupported devices, a missing
+                // entitlement and regions where the framework is not available.
                 return nil
             @unknown default:
                 return nil
@@ -77,7 +81,7 @@ enum TrustInsightsCheck {
             case .contextInvalid(let detail):
                 log.fault("Invalid request, a bug to fix: \(detail, privacy: .public)")
             case .denied:
-                log.notice("Permission was withdrawn")
+                log.notice("Evaluation denied")
             case .notAvailable:
                 log.notice("Trust Insights is not available")
             case .rateLimitExceeded:

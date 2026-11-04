@@ -14,12 +14,15 @@ The background, and why your app should adopt this, is in the article:
 ## What you need
 
 - Xcode 27 and an iPhone running iOS 27. Trust Insights needs internet
-  access, and the evaluation comes from Apple's servers.
+  access, and evaluation runs partly on the device and partly on Apple's
+  servers.
 - Your own team. Select it under Signing & Capabilities, then add the
   **Trust Insights** capability, which fills in the
   `com.apple.developer.trustinsights.base` entitlement.
 - On the iPhone, Settings > Privacy & Security > Impersonation Risk
-  Detection turned on.
+  Detection turned on. If the app reports `.unavailable` on a real device
+  with the capability added, the causes Apple lists that remain are an
+  unsupported device or region.
 
 While you develop, requests go to Apple's sandbox. A build from the App
 Store gets the production models.
