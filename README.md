@@ -15,14 +15,16 @@ The background, and why your app should adopt this, is in the article:
 
 - Xcode 27 and an iPhone running iOS 27. Trust Insights needs internet
   access, and evaluation runs partly on the device and partly on Apple's
-  servers.
+  servers. The simulator returns `.unavailable`, so you need a device to see
+  anything happen.
 - Your own team. Select it under Signing & Capabilities, then add the
   **Trust Insights** capability, which fills in the
   `com.apple.developer.trustinsights.base` entitlement.
 - On the iPhone, Settings > Privacy & Security > Impersonation Risk
-  Detection turned on. If the app reports `.unavailable` on a real device
-  with the capability added, the causes Apple lists that remain are an
-  unsupported device or region.
+  Detection turned on. With it off, for the app or for everything,
+  `authorizationStatus(for:)` returns `.denied`. If the app reports
+  `.unavailable` on a real device with the capability added, the causes Apple
+  lists that remain are an unsupported device or region.
 
 While you develop, requests go to Apple's sandbox. A build from the App
 Store gets the production models.
@@ -42,17 +44,21 @@ The five steps in `TrustInsightsCheck.swift`:
    `IsLikelyBeingCoachedInsight`.
 2. **Ask for permission, at a calm moment.** From a settings action, after
    explaining what it does. Never in the middle of a transfer, where a
-   scammer on the phone would tell the person to tap Not Now.
+   scammer on the phone would tell the person to tap Not Now. The app reads
+   the status that comes back, and only sends the person to Settings when
+   Settings can help.
 3. **Request an evaluation.** Started when the transfer screen appears, so
-   the couple of seconds it takes pass while the person reads. Every
+   the seconds it takes pass while the person reads. Every
    authorization status and every error is handled, and each one ends with
    the app falling back to its own checks.
 4. **Decide, and report.** `unknown` leaves friction as it was, `medium`
    warns, `high` holds the transfer. Every evaluation is reported with
    `reportConsumption` exactly once, on every branch, including a cancelled
-   transfer. An app that skips this may be rate-limited.
-5. **Record what happened.** The result and the friction, kept with the
-   transfer in your own records. The sample logs them.
+   transfer. An app that skips this may be rate-limited or lose access to
+   the service.
+5. **Record what happened.** The result, the friction and the evaluation's
+   `eventID`, kept with the transfer in your own records. The sample logs
+   them.
 
 ## Everything happens in the app
 

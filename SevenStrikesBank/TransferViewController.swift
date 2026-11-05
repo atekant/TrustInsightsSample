@@ -101,15 +101,20 @@ final class TransferViewController: UIViewController {
         let context = TrustInsightsCheck.context()
         let explainer = UIAlertController(
             title: "Scam Protection",
-            message: "iPhone can warn us when it looks like someone is talking you through a payment. "
-                + "We get a risk level, not the information iPhone used to work it out.",
+            message: "Impersonation Risk Detection on iPhone can warn us when it looks like someone is talking you "
+                + "through a payment. We get a risk level, not the information iPhone used to work it out.",
             preferredStyle: .alert,
         )
         explainer.addAction(UIAlertAction(title: "Not Now", style: .cancel))
         explainer.addAction(UIAlertAction(title: "Turn On", style: .default) { [weak self] _ in
             Task {
-                let allowed = await TrustInsightsCheck.requestAuthorization(for: context)
-                if !allowed {
+                switch await TrustInsightsCheck.requestAuthorization(for: context) {
+                case .authorized:
+                    break
+                case .unavailable:
+                    // Settings cannot fix an unsupported device or region, so do not send the person there.
+                    self?.alert("Scam Protection", "Scam protection is not available on this device.")
+                default:
                     self?.alert("Scam Protection", "You can turn it on in Settings > Privacy & Security > "
                                 + "Impersonation Risk Detection.")
                 }

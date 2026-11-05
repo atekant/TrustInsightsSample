@@ -38,13 +38,13 @@ enum TrustInsightsCheck {
 
     // MARK: 2. Ask for permission, at a calm moment
 
-    /// Asks the person to allow Trust Insights.
+    /// Asks the person to allow Trust Insights, and returns the status that comes back.
     ///
     /// Call this from a deliberate action, such as a settings row, after explaining what it does. Never in the
-    /// middle of a transfer: a scammer on the phone would simply say "tap Not Now".
-    static func requestAuthorization(for context: CoachingContext) async -> Bool {
-        let status = try? await InsightEvaluator().requestAuthorization(for: context)
-        return status == .authorized
+    /// middle of a transfer, where a scammer on the phone would tell the person to tap Not Now. The caller needs the
+    /// status itself, because there is no point sending someone to Settings when the answer is `.unavailable`.
+    static func requestAuthorization(for context: CoachingContext) async -> InsightEvaluator.AuthorizationStatus? {
+        try? await InsightEvaluator().requestAuthorization(for: context)
     }
 
     // MARK: 3. Request an evaluation
@@ -52,7 +52,8 @@ enum TrustInsightsCheck {
     /// Requests an evaluation, or returns `nil` when there is none to be had.
     ///
     /// The result comes back as the return value of this call. There is no delegate, notification or extension.
-    /// It can take a couple of seconds and needs internet access, so start it early (see `TransferViewController`).
+    /// The session says it takes a couple of seconds and the documentation says several, and it needs internet
+    /// access, so start it early (see `TransferViewController`).
     /// While you develop, requests go to Apple's sandbox; an App Store build gets the production models.
     /// A production app should also stop waiting after a deadline of its own and go ahead on its usual checks.
     static func evaluate(_ context: CoachingContext) async -> CoachingEvaluation? {
@@ -89,7 +90,7 @@ enum TrustInsightsCheck {
             case .serverError, .localError:
                 log.notice("Transient failure. Try again on the next transfer, not in a loop.")
             case .payloadSecurityError:
-                log.error("The payload could not be secured")
+                log.error("The payload should not be trusted, and may have been tampered with")
             @unknown default:
                 log.error("Unknown error: \(String(describing: error), privacy: .public)")
             }
@@ -104,7 +105,8 @@ enum TrustInsightsCheck {
 
     /// Chooses the friction, and reports the choice to Trust Insights.
     ///
-    /// Every evaluation must be reported exactly once, or the app may be rate-limited. Each branch below reports.
+    /// Every evaluation must be reported exactly once, or the app may be rate-limited or lose access to the service.
+    /// Each branch below reports.
     ///
     /// The decision is made in the app, so it only ever adds friction. Anyone who can change the app can change what
     /// it reads here, and faking `unknown` only removes friction this sample never takes away.
@@ -145,12 +147,14 @@ enum TrustInsightsCheck {
     /// Writes down the result and what the app did with it. This sample only logs.
     ///
     /// Keep it with the transfer in your own records. Your fraud team needs to see, later, what happened to the
-    /// transfers that got each result: that is how a bank works out how much weight `medium` deserves.
+    /// transfers that got each result: that is how a bank works out how much weight `medium` deserves. Keep the
+    /// `eventID` as well, which is what Apple's documentation says to report if fraud is discovered later.
     static func record(_ evaluation: CoachingEvaluation?, transactionID: String, friction: Friction) {
         let result = evaluation.map { String(describing: $0.insight.outcome) } ?? "no evaluation"
+        let eventID = evaluation?.eventID ?? "none"
         log.info("""
             Transfer \(transactionID, privacy: .public): \(result, privacy: .public), \
-            friction \(String(describing: friction), privacy: .public)
+            friction \(String(describing: friction), privacy: .public), event \(eventID, privacy: .public)
             """)
     }
 }
